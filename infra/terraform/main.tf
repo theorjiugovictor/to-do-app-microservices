@@ -203,7 +203,6 @@ resource "null_resource" "run_ansible" {
 
   triggers = {
     instance_id = aws_instance.app_server.id
-    always_run  = timestamp()
   }
 
   provisioner "local-exec" {

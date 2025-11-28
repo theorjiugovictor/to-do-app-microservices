@@ -46,9 +46,8 @@ jobs:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
           set +e
-          terraform plan -out=tfplan -detailed-exitcode > plan_output.txt 2>&1
-          EXIT_CODE=$?
-          cat plan_output.txt
+          terraform plan -out=tfplan -detailed-exitcode | tee plan_output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
           
           echo "📊 Terraform plan exit code: $EXIT_CODE"
           
@@ -100,6 +99,7 @@ jobs:
             Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Upload plan
+        if: steps.drift_check.outputs.drift_detected == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
