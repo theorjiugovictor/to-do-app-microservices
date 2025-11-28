@@ -17,8 +17,15 @@ variable "instance_type" {
 }
 
 variable "ssh_public_key_path" {
-  description = "Path to SSH public key"
+  description = "Path to SSH public key (optional, use ssh_public_key instead in CI/CD)"
   type        = string
+  default     = ""
+}
+
+variable "ssh_public_key" {
+  description = "SSH public key content (use this in CI/CD instead of file path)"
+  type        = string
+  default     = ""
 }
 
 variable "ssh_private_key_path" {

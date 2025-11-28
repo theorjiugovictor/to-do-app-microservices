@@ -147,7 +147,7 @@ resource "aws_iam_instance_profile" "ssm_profile" {
 # EC2 Key Pair
 resource "aws_key_pair" "deployer" {
   key_name   = "${var.project_name}-key"
-  public_key = file(var.ssh_public_key_path)
+  public_key = var.ssh_public_key != "" ? var.ssh_public_key : file(var.ssh_public_key_path)
 }
 
 # EC2 Instance

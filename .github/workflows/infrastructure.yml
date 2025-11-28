@@ -41,6 +41,8 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ./infra/terraform
+        env:
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
           set +e
           terraform plan -out=tfplan -detailed-exitcode > plan_output.txt 2>&1
@@ -141,6 +143,8 @@ jobs:
 
       - name: Terraform Apply
         working-directory: ./infra/terraform
+        env:
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
           if [ -f tfplan ]; then
             echo "📦 Applying Terraform plan..."
