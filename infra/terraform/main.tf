@@ -175,6 +175,7 @@ resource "aws_instance" "app_server" {
     Name        = "${var.project_name}-server"
     Environment = "production"
     ManagedBy   = "terraform"
+    Project     = "todo-app"
   }
 
   lifecycle {
