@@ -46,7 +46,7 @@ jobs:
         env:
           TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: |
-          set -o pipefail
+          set +e  # Don't exit on error
           terraform plan -out=tfplan -detailed-exitcode 2>&1 | tee plan_output.txt
           EXIT_CODE=${PIPESTATUS[0]}
           
