@@ -1,0 +1,76 @@
+---
+- name: Check if app repository exists
+  stat:
+    path: /opt/todo-app
+  register: repo_exists
+
+- name: Clone application repository
+  git:
+    repo: "{{ github_repo }}"
+    dest: /opt/todo-app
+    version: main
+    force: yes
+  when: not repo_exists.stat.exists
+  become: yes
+
+- name: Pull latest changes
+  git:
+    repo: "{{ github_repo }}"
+    dest: /opt/todo-app
+    version: main
+    force: yes
+  become: yes
+  when: repo_exists.stat.exists
+  register: git_pull
+
+- name: Create .env file
+  template:
+    src: env.j2
+    dest: /opt/todo-app/.env
+    mode: '0600'
+  become: yes
+  register: env_file
+
+- name: Create letsencrypt directory
+  file:
+    path: /opt/todo-app/letsencrypt
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Stop existing containers if code changed
+  command: docker compose down
+  args:
+    chdir: /opt/todo-app
+  become: yes
+  when: git_pull.changed or env_file.changed
+  ignore_errors: yes
+
+- name: Build and start containers
+  command: docker compose up -d --build
+  args:
+    chdir: /opt/todo-app
+  become: yes
+  when: git_pull.changed or env_file.changed
+
+- name: Start containers if not changed
+  command: docker compose up -d
+  args:
+    chdir: /opt/todo-app
+  become: yes
+  when: not (git_pull.changed or env_file.changed)
+
+- name: Wait for services to be healthy
+  pause:
+    seconds: 30
+
+- name: Check container status
+  command: docker compose ps
+  args:
+    chdir: /opt/todo-app
+  become: yes
+  register: container_status
+
+- name: Display container status
+  debug:
+    var: container_status.stdout_lines

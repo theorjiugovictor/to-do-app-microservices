@@ -1,0 +1,9 @@
+---
+- name: Setup and Deploy HNG TODO Application
+  hosts: app_servers
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - dependencies
+    - deploy
