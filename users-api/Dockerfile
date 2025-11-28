@@ -1,5 +1,6 @@
 # users-api/Dockerfile
-FROM maven:3.9-eclipse-temurin-17 AS builder
+# Using Java 11 for compatibility with Spring Boot 1.5.6
+FROM maven:3.9-eclipse-temurin-11 AS builder
 
 WORKDIR /app
 
@@ -16,7 +17,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Production stage
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:11-jre-alpine
 
 WORKDIR /app
 
