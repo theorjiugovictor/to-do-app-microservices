@@ -172,7 +172,9 @@ resource "aws_instance" "app_server" {
               EOF
 
   tags = {
-    Name = "${var.project_name}-server"
+    Name        = "${var.project_name}-server"
+    Environment = "production"
+    ManagedBy   = "terraform"
   }
 
   lifecycle {
