@@ -50,10 +50,16 @@ jobs:
           EXIT_CODE=$?
           cat plan_output.txt
           
+          echo "📊 Terraform plan exit code: $EXIT_CODE"
+          
           # Exit codes: 0 = no changes, 1 = error, 2 = changes detected
           if [ $EXIT_CODE -eq 1 ]; then
             echo "❌ Terraform plan failed"
             exit 1
+          elif [ $EXIT_CODE -eq 2 ]; then
+            echo "🚨 Changes detected!"
+          elif [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ No changes detected"
           fi
           
           echo "plan_exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
@@ -64,6 +70,8 @@ jobs:
         working-directory: ./infra/terraform
         run: |
           PLAN_EXIT_CODE=${{ steps.plan.outputs.plan_exit_code }}
+          
+          echo "🔍 Checking drift with exit code: $PLAN_EXIT_CODE"
           
           if [ "$PLAN_EXIT_CODE" = "0" ]; then
             echo "drift_detected=false" >> $GITHUB_OUTPUT
