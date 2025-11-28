@@ -4,6 +4,11 @@
   become: yes
   gather_facts: yes
   
+  # SSH connection settings
+  vars:
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    ansible_ssh_retries: 5
+  
   roles:
     - dependencies
     - deploy

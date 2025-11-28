@@ -112,6 +112,38 @@ resource "aws_security_group" "app_server" {
   }
 }
 
+# IAM Role for SSM
+resource "aws_iam_role" "ssm_role" {
+  name = "${var.project_name}-ssm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.project_name}-ssm-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_policy" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ssm_profile" {
+  name = "${var.project_name}-ssm-profile"
+  role = aws_iam_role.ssm_role.name
+}
+
 # EC2 Key Pair
 resource "aws_key_pair" "deployer" {
   key_name   = "${var.project_name}-key"
@@ -126,6 +158,7 @@ resource "aws_instance" "app_server" {
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.app_server.id]
   key_name                    = aws_key_pair.deployer.key_name
+  iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
   associate_public_ip_address = true
 
   root_block_device {
@@ -174,7 +207,23 @@ resource "null_resource" "run_ansible" {
   provisioner "local-exec" {
     command = <<EOT
       echo "Waiting for instance to be ready..."
-      sleep 60
+      max_attempts=30
+      attempt=0
+      while [ $attempt -lt $max_attempts ]; do
+        echo "Attempt $((attempt + 1))/$max_attempts: Checking SSH connectivity..."
+        if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ${var.ssh_private_key_path} ubuntu@${aws_instance.app_server.public_ip} "echo 'SSH is ready'" 2>/dev/null; then
+          echo "SSH is ready!"
+          break
+        fi
+        attempt=$((attempt + 1))
+        sleep 10
+      done
+      
+      if [ $attempt -eq $max_attempts ]; then
+        echo "Failed to connect to instance after $max_attempts attempts"
+        exit 1
+      fi
+      
       cd ${path.module}/../ansible
       ansible-playbook -i inventory.ini playbook.yml
     EOT
