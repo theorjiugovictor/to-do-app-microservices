@@ -2,27 +2,20 @@ version: '3.8'
 
 services:
   traefik:
-    image: traefik:v3.0
+    image: traefik:latest
     container_name: traefik
     environment:
       - DOCKER_API_VERSION=1.44
     command:
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
+      - "--configFile=/etc/traefik/traefik.yml"
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
     networks:
       - app-network
     restart: unless-stopped
