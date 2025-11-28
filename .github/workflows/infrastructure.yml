@@ -63,6 +63,9 @@ jobs:
           fi
           
           echo "plan_exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          
+          # Exit 0 so the job succeeds even when changes are detected (exit code 2)
+          exit 0
 
       - name: Check for drift
         id: drift_check
