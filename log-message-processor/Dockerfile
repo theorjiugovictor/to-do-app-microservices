@@ -1,5 +1,7 @@
 # log-message-processor/Dockerfile
-FROM python:3.11-slim
+# Using Python 3.10 for compatibility with thriftpy 0.3.9
+# (Python 3.11 removed longintrepr.h which breaks thriftpy compilation)
+FROM python:3.10-slim
 
 WORKDIR /app
 
