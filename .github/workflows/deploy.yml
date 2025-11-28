@@ -1,0 +1,104 @@
+name: Application Deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - 'auth-api/**'
+      - 'todos-api/**'
+      - 'users-api/**'
+      - 'log-message-processor/**'
+      - 'docker-compose.yml'
+      - 'traefik.yml'
+  workflow_dispatch:
+
+env:
+  SERVER_USER: ubuntu
+  SERVER_HOST: 3.255.120.244
+  DEPLOY_PATH: /opt/todo-app
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://chaosplease.hopto.org
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'EOF'
+            set -e
+            echo "🚀 Starting deployment..."
+            
+            # Navigate to app directory
+            cd ${{ env.DEPLOY_PATH }}
+            
+            # Pull latest changes
+            echo "📥 Pulling latest code from GitHub..."
+            sudo git pull origin main
+            
+            # Rebuild and restart containers
+            echo "🔨 Rebuilding and restarting Docker containers..."
+            sudo docker compose up -d --build
+            
+            # Wait for services to be healthy
+            echo "⏳ Waiting for services to start..."
+            sleep 10
+            
+            # Check container status
+            echo "✅ Deployment complete! Container status:"
+            sudo docker compose ps
+          EOF
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          
+          # Check if the site is accessible
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://chaosplease.hopto.org)
+          
+          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 308 ]; then
+            echo "✅ Site is accessible (HTTP $HTTP_CODE)"
+          else
+            echo "❌ Site returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Send deployment notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: ${{ job.status == 'success' && '✅ Deployment Successful' || '❌ Deployment Failed' }}
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: HNG DevOps Bot
+          body: |
+            Deployment Status: ${{ job.status }}
+            
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Commit Message: ${{ github.event.head_commit.message }}
+            Triggered by: ${{ github.actor }}
+            
+            Deployment URL: https://chaosplease.hopto.org
+            Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            ${{ job.status == 'success' && '🎉 Your application has been successfully deployed!' || '⚠️ Deployment failed. Please check the logs.' }}
